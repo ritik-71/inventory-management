@@ -78,6 +78,7 @@ export default function AuthPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
+        credentials: "include",
       });
 
       const data = await res.json();
@@ -97,8 +98,8 @@ export default function AuthPage() {
         "success"
       );
 
-      // Auto-login maps jwt and email into AuthContext
-      login(data.token, data.email);
+      // Auto-login maps jwt, email, name, and role into AuthContext
+      login(data.token, data.email, data.name, data.role);
     } catch (err: any) {
       addToast(err.message || "An unexpected error occurred", "error");
 

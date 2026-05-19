@@ -55,9 +55,16 @@ public class AuthController {
         // Set HttpOnly Cookies
         setCookies(response, accessToken, refreshToken);
         
-        Map<String, String> responseData = new HashMap<>();
+        // Retrieve persistent user details
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new BadRequestException("User not found with email: " + email));
+        
+        Map<String, Object> responseData = new HashMap<>();
         responseData.put("token", accessToken);
         responseData.put("email", email);
+        responseData.put("name", user.getName());
+        responseData.put("role", user.getRole());
+        responseData.put("message", "Login successful");
         
         return ResponseEntity.ok(responseData);
     }
@@ -96,6 +103,7 @@ public class AuthController {
         responseData.put("token", accessToken);
         responseData.put("email", user.getEmail());
         responseData.put("name", user.getName());
+        responseData.put("role", user.getRole());
         responseData.put("message", "User registered successfully");
 
         return ResponseEntity.ok(responseData);
@@ -132,9 +140,16 @@ public class AuthController {
         
         setCookies(response, newAccessToken, newRefreshToken);
         
-        Map<String, String> responseData = new HashMap<>();
+        // Retrieve persistent user details
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new BadRequestException("User not found with email: " + email));
+        
+        Map<String, Object> responseData = new HashMap<>();
         responseData.put("token", newAccessToken);
         responseData.put("email", email);
+        responseData.put("name", user.getName());
+        responseData.put("role", user.getRole());
+        responseData.put("message", "Session refreshed successfully");
         
         return ResponseEntity.ok(responseData);
     }
