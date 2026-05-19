@@ -9,33 +9,39 @@ interface InventoryTableProps {
   onEdit: (item: InventoryItem) => void;
   onDelete: (item: InventoryItem) => void;
   onBulkDelete: (ids: number[]) => void;
+  hideActions?: boolean;
+  currentPage?: number;
+  totalPages?: number;
+  onPageChange?: (page: number) => void;
+  onSortChange?: (sortField: string, sortOrder: string) => void;
 }
 
 type SortField = 'id' | 'name' | 'quantity' | 'sellingPrice' | 'dateAdded';
 type SortOrder = 'asc' | 'desc';
 
-export const InventoryTable: React.FC<InventoryTableProps> = React.memo(({ items, onEdit, onDelete, onBulkDelete }) => {
+export const InventoryTable: React.FC<InventoryTableProps> = React.memo(({ 
+  items, onEdit, onDelete, onBulkDelete, hideActions,
+  currentPage = 1, totalPages = 1, onPageChange, onSortChange 
+}) => {
   const [sortField, setSortField] = useState<SortField>('id');
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
-  const [currentPage, setCurrentPage] = useState(1);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   
-  const itemsPerPage = 10;
-
   const handleSort = (field: SortField) => {
+    let newOrder: SortOrder = 'desc';
     if (sortField === field) {
-      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortField(field);
-      setSortOrder('desc');
+      newOrder = sortOrder === 'asc' ? 'desc' : 'asc';
     }
+    setSortField(field);
+    setSortOrder(newOrder);
+    if (onSortChange) onSortChange(field, newOrder);
   };
 
   const toggleSelectAll = () => {
-    if (selectedIds.size === currentItems.length) {
+    if (selectedIds.size === items.length) {
       setSelectedIds(new Set());
     } else {
-      setSelectedIds(new Set(currentItems.map(i => i.id)));
+      setSelectedIds(new Set(items.map(i => i.id)));
     }
   };
 
@@ -46,33 +52,10 @@ export const InventoryTable: React.FC<InventoryTableProps> = React.memo(({ items
     setSelectedIds(newSet);
   };
 
-  const sortedItems = useMemo(() => {
-    return [...items].sort((a, b) => {
-      let aVal = a[sortField];
-      let bVal = b[sortField];
-      
-      if (sortField === 'dateAdded') {
-        aVal = new Date(aVal as string).getTime();
-        bVal = new Date(bVal as string).getTime();
-      }
-
-      if (aVal < bVal) return sortOrder === 'asc' ? -1 : 1;
-      if (aVal > bVal) return sortOrder === 'asc' ? 1 : -1;
-      return 0;
-    });
-  }, [items, sortField, sortOrder]);
-
-  const totalPages = Math.ceil(sortedItems.length / itemsPerPage);
-  const currentItems = useMemo(() => {
-    const start = (currentPage - 1) * itemsPerPage;
-    return sortedItems.slice(start, start + itemsPerPage);
-  }, [sortedItems, currentPage]);
-
-  // Reset pagination and selection if dataset changes significantly
+  // Reset selection if dataset changes significantly
   React.useEffect(() => {
-    setCurrentPage(1);
     setSelectedIds(new Set());
-  }, [items.length]);
+  }, [items]);
 
   const getStatusBadge = (status: string) => {
     switch(status) {
@@ -115,7 +98,7 @@ export const InventoryTable: React.FC<InventoryTableProps> = React.memo(({ items
         <thead>
           <tr>
             <th style={{ width: '40px' }}>
-              <input type="checkbox" checked={selectedIds.size === currentItems.length && currentItems.length > 0} onChange={toggleSelectAll} />
+              <input type="checkbox" checked={selectedIds.size === items.length && items.length > 0} onChange={toggleSelectAll} />
             </th>
             <th style={{ cursor: 'pointer' }} onClick={() => handleSort('id')}>ID {sortField === 'id' && (sortOrder === 'asc' ? '↑' : '↓')}</th>
             <th style={{ cursor: 'pointer' }} onClick={() => handleSort('name')}>Name {sortField === 'name' && (sortOrder === 'asc' ? '↑' : '↓')}</th>
@@ -125,11 +108,11 @@ export const InventoryTable: React.FC<InventoryTableProps> = React.memo(({ items
             <th>Supplier</th>
             <th style={{ cursor: 'pointer' }} onClick={() => handleSort('dateAdded')}>Date {sortField === 'dateAdded' && (sortOrder === 'asc' ? '↑' : '↓')}</th>
             <th>Status</th>
-            <th style={{ textAlign: 'right' }}>Actions</th>
+            {!hideActions && <th style={{ textAlign: 'right' }}>Actions</th>}
           </tr>
         </thead>
         <tbody>
-          {currentItems.map(item => (
+          {items.map(item => (
             <tr key={item.id} style={{ background: selectedIds.has(item.id) ? '#f8fafc' : undefined }}>
               <td>
                 <input type="checkbox" checked={selectedIds.has(item.id)} onChange={() => toggleSelect(item.id)} />
@@ -149,20 +132,22 @@ export const InventoryTable: React.FC<InventoryTableProps> = React.memo(({ items
               <td>{item.supplier}</td>
               <td style={{ color: 'var(--text-muted)' }}>{formatDate(item.dateAdded)}</td>
               <td>{getStatusBadge(item.status)}</td>
-              <td>
-                <div className="table-actions" style={{ justifyContent: 'flex-end' }}>
-                  <button className="btn-icon" onClick={() => onEdit(item)} title="Edit Item">
-                    <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                    </svg>
-                  </button>
-                  <button className="btn-icon danger" onClick={() => onDelete(item)} title="Delete Item">
-                    <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
-                  </button>
-                </div>
-              </td>
+              {!hideActions && (
+                <td>
+                  <div className="table-actions" style={{ justifyContent: 'flex-end' }}>
+                    <button className="btn-icon" onClick={() => onEdit(item)} title="Edit Item">
+                      <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                    </button>
+                    <button className="btn-icon danger" onClick={() => onDelete(item)} title="Delete Item">
+                      <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+                  </div>
+                </td>
+              )}
             </tr>
           ))}
         </tbody>
@@ -170,11 +155,11 @@ export const InventoryTable: React.FC<InventoryTableProps> = React.memo(({ items
       {totalPages > 1 && (
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem 1.25rem', borderTop: '1px solid var(--border)', background: '#fff' }}>
           <span style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>
-            Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, sortedItems.length)} of {sortedItems.length} results
+            Page {currentPage} of {totalPages}
           </span>
           <div style={{ display: 'flex', gap: '0.5rem' }}>
-            <button className="btn btn-outline" disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)}>Previous</button>
-            <button className="btn btn-outline" disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)}>Next</button>
+            <button className="btn btn-outline" disabled={currentPage <= 1} onClick={() => onPageChange && onPageChange(currentPage - 1)}>Previous</button>
+            <button className="btn btn-outline" disabled={currentPage >= totalPages} onClick={() => onPageChange && onPageChange(currentPage + 1)}>Next</button>
           </div>
         </div>
       )}

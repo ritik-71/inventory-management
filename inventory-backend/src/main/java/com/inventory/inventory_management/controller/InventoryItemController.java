@@ -11,6 +11,11 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 
+import java.util.Map;
+import java.util.HashMap;
+import java.math.BigDecimal;
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/items")
 public class InventoryItemController {
@@ -29,6 +34,35 @@ public class InventoryItemController {
             return ResponseEntity.ok(service.searchItemsByName(search, pageable));
         }
         return ResponseEntity.ok(service.getAllItems(pageable));
+    }
+
+    @GetMapping("/analytics")
+    public ResponseEntity<Map<String, Object>> getInventoryAnalytics() {
+        // Since we are now using pagination, global KPIs must be aggregated server-side
+        List<InventoryItemDTO> allItems = service.getAllItems(Pageable.unpaged()).getContent();
+        
+        long totalItems = allItems.size();
+        BigDecimal inventoryValue = BigDecimal.ZERO;
+        long lowStock = 0;
+        long outOfStock = 0;
+
+        for (InventoryItemDTO item : allItems) {
+            if (item.getSellingPrice() != null && item.getQuantity() != null) {
+                inventoryValue = inventoryValue.add(item.getSellingPrice().multiply(new BigDecimal(item.getQuantity())));
+            }
+            if (item.getQuantity() != null) {
+                if (item.getQuantity() > 0 && item.getQuantity() < 10) lowStock++;
+                if (item.getQuantity() == 0) outOfStock++;
+            }
+        }
+
+        Map<String, Object> analytics = new HashMap<>();
+        analytics.put("totalItems", totalItems);
+        analytics.put("inventoryValue", inventoryValue);
+        analytics.put("lowStock", lowStock);
+        analytics.put("outOfStock", outOfStock);
+
+        return ResponseEntity.ok(analytics);
     }
 
     @GetMapping("/{id}")

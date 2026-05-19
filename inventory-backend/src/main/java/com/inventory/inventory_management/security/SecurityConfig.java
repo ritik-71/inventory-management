@@ -48,8 +48,10 @@ public class SecurityConfig {
                 .headers(headers -> headers
                         .frameOptions(frameOptions -> frameOptions.deny())
                         .xssProtection(xss -> xss.disable()) // Handled by CSP
+                        .httpStrictTransportSecurity(hsts -> hsts.includeSubDomains(true).maxAgeInSeconds(31536000))
+                        .referrerPolicy(referrer -> referrer.policy(org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter.ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN))
                         .contentSecurityPolicy(
-                                csp -> csp.policyDirectives("default-src 'self'; frame-ancestors 'none'; sandbox")))
+                                csp -> csp.policyDirectives("default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; frame-ancestors 'none';")))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authz -> authz
                         .requestMatchers("/api/auth/**").permitAll()

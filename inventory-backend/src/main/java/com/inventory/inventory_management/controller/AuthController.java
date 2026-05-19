@@ -37,6 +37,9 @@ public class AuthController {
     @Autowired
     private JwtTokenProvider tokenProvider;
 
+    @Autowired
+    private com.inventory.inventory_management.repository.RefreshTokenRepository refreshTokenRepository;
+
     @PostMapping("/login")
     public ResponseEntity<?> authenticateUser(@RequestBody Map<String, String> loginRequest, HttpServletResponse response) {
         Authentication authentication = authenticationManager.authenticate(
@@ -51,6 +54,13 @@ public class AuthController {
         String email = loginRequest.get("email");
         String accessToken = tokenProvider.generateAccessToken(email);
         String refreshToken = tokenProvider.generateRefreshToken(email);
+
+        // Persist refresh token
+        com.inventory.inventory_management.entity.RefreshToken rt = new com.inventory.inventory_management.entity.RefreshToken();
+        rt.setToken(refreshToken);
+        rt.setUserEmail(email);
+        rt.setExpiryDate(java.time.Instant.now().plusMillis(604800000)); // 7 days
+        refreshTokenRepository.save(rt);
 
         // Set HttpOnly Cookies
         setCookies(response, accessToken, refreshToken);
@@ -96,6 +106,13 @@ public class AuthController {
         String accessToken = tokenProvider.generateAccessToken(user.getEmail());
         String refreshToken = tokenProvider.generateRefreshToken(user.getEmail());
 
+        // Persist refresh token
+        com.inventory.inventory_management.entity.RefreshToken rt = new com.inventory.inventory_management.entity.RefreshToken();
+        rt.setToken(refreshToken);
+        rt.setUserEmail(user.getEmail());
+        rt.setExpiryDate(java.time.Instant.now().plusMillis(604800000)); // 7 days
+        refreshTokenRepository.save(rt);
+
         // Set HttpOnly Cookies
         setCookies(response, accessToken, refreshToken);
 
@@ -133,10 +150,30 @@ public class AuthController {
         if (refreshToken == null || !tokenProvider.validateToken(refreshToken)) {
             throw new BadRequestException("Invalid or expired refresh token. Please login again.");
         }
-        
+
+        // Validate against database revocation list
+        com.inventory.inventory_management.entity.RefreshToken storedToken = refreshTokenRepository.findByToken(refreshToken)
+                .orElseThrow(() -> new BadRequestException("Refresh token not found. Please login again."));
+
+        if (storedToken.isRevoked() || storedToken.getExpiryDate().isBefore(java.time.Instant.now())) {
+            throw new BadRequestException("Refresh token revoked or expired. Please login again.");
+        }
+
         String email = tokenProvider.getEmailFromJWT(refreshToken);
+        
+        // Token Rotation: Revoke old token
+        storedToken.setRevoked(true);
+        refreshTokenRepository.save(storedToken);
+
         String newAccessToken = tokenProvider.generateAccessToken(email);
         String newRefreshToken = tokenProvider.generateRefreshToken(email);
+
+        // Save new token
+        com.inventory.inventory_management.entity.RefreshToken newRt = new com.inventory.inventory_management.entity.RefreshToken();
+        newRt.setToken(newRefreshToken);
+        newRt.setUserEmail(email);
+        newRt.setExpiryDate(java.time.Instant.now().plusMillis(604800000));
+        refreshTokenRepository.save(newRt);
         
         setCookies(response, newAccessToken, newRefreshToken);
         
@@ -155,22 +192,38 @@ public class AuthController {
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<?> logoutUser(HttpServletResponse response) {
+    public ResponseEntity<?> logoutUser(HttpServletRequest request, HttpServletResponse response) {
+        // Extract token to revoke
+        String refreshToken = null;
+        if (request.getCookies() != null) {
+            for (Cookie cookie : request.getCookies()) {
+                if ("refresh_token".equals(cookie.getName())) {
+                    refreshToken = cookie.getValue();
+                }
+            }
+        }
+        if (refreshToken != null) {
+            refreshTokenRepository.findByToken(refreshToken).ifPresent(rt -> {
+                rt.setRevoked(true);
+                refreshTokenRepository.save(rt);
+            });
+        }
+
         // Clear cookies by sending expired maxAge=0 headers
         ResponseCookie clearAccess = ResponseCookie.from("access_token", "")
                 .httpOnly(true)
-                .secure(false)
+                .secure(true) // Required for SameSite=None
                 .path("/")
                 .maxAge(0)
-                .sameSite("Lax")
+                .sameSite("None") // Required for cross-origin deployment
                 .build();
 
         ResponseCookie clearRefresh = ResponseCookie.from("refresh_token", "")
                 .httpOnly(true)
-                .secure(false)
+                .secure(true)
                 .path("/")
                 .maxAge(0)
-                .sameSite("Lax")
+                .sameSite("None")
                 .build();
 
         response.addHeader(HttpHeaders.SET_COOKIE, clearAccess.toString());
@@ -184,18 +237,18 @@ public class AuthController {
     private void setCookies(HttpServletResponse response, String accessToken, String refreshToken) {
         ResponseCookie accessCookie = ResponseCookie.from("access_token", accessToken)
                 .httpOnly(true)
-                .secure(false) // Set to true in prod (HTTPS)
+                .secure(true) // Enforced for cross-origin HTTPS deployments
                 .path("/")
                 .maxAge(900) // 15 mins
-                .sameSite("Lax")
+                .sameSite("None") // Permits Vercel to Render cookie exchange
                 .build();
 
         ResponseCookie refreshCookie = ResponseCookie.from("refresh_token", refreshToken)
                 .httpOnly(true)
-                .secure(false)
+                .secure(true)
                 .path("/")
                 .maxAge(604800) // 7 days
-                .sameSite("Lax")
+                .sameSite("None")
                 .build();
 
         response.addHeader(HttpHeaders.SET_COOKIE, accessCookie.toString());

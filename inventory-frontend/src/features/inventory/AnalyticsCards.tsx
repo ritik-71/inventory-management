@@ -1,19 +1,30 @@
 "use client";
 
-import React, { useMemo } from 'react';
-import { useInventory } from '../../hooks/useInventory';
+import React, { useState, useEffect } from 'react';
+import { apiInstance } from '../../utils/apiClient';
 
 export const AnalyticsCards: React.FC = () => {
-  const { items, loading } = useInventory();
+  const [analytics, setAnalytics] = useState({
+    totalItems: 0,
+    inventoryValue: 0,
+    lowStock: 0,
+    outOfStock: 0
+  });
+  const [loading, setLoading] = useState(true);
 
-  const analytics = useMemo(() => {
-    return {
-      totalItems: items.length,
-      inventoryValue: items.reduce((sum, item) => sum + ((item.sellingPrice || 0) * item.quantity), 0),
-      lowStock: items.filter(i => i.quantity > 0 && i.quantity < 10).length,
-      outOfStock: items.filter(i => i.quantity === 0).length,
+  useEffect(() => {
+    const fetchAnalytics = async () => {
+      try {
+        const data: any = await apiInstance.get('/api/items/analytics');
+        setAnalytics(data);
+      } catch (err) {
+        console.error("Failed to fetch analytics", err);
+      } finally {
+        setLoading(false);
+      }
     };
-  }, [items]);
+    fetchAnalytics();
+  }, []);
 
   if (loading) {
     return (

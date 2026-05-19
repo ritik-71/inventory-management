@@ -12,6 +12,17 @@ import java.math.BigDecimal;
 public class InventoryManagementApplication {
 
 	public static void main(String[] args) {
+        String profile = System.getenv("SPRING_PROFILES_ACTIVE");
+        if ("prod".equals(profile) || "production".equals(profile)) {
+            if (System.getenv("JWT_SECRET") == null || System.getenv("JWT_SECRET").length() < 32) {
+                System.err.println("FATAL: JWT_SECRET environment variable is missing or insufficiently secure (<32 chars) for production.");
+                System.exit(1);
+            }
+            if (System.getenv("SPRING_DATASOURCE_URL") == null) {
+                System.err.println("FATAL: SPRING_DATASOURCE_URL is missing. Database connection cannot be established.");
+                System.exit(1);
+            }
+        }
 		SpringApplication.run(InventoryManagementApplication.class, args);
 	}
 

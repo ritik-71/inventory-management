@@ -20,5 +20,9 @@ USER spring:spring
 ENV PORT=8080
 EXPOSE 8080
 
+# Production Healthcheck for Container Orchestrators (Render/Docker Swarm)
+HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \
+  CMD curl --fail http://localhost:8080/actuator/health || exit 1
+
 # JVM memory configurations optimized for cloud resource limits (e.g. Render Free Tier's 512MB RAM)
 ENTRYPOINT ["java", "-XX:+UseG1GC", "-XX:MaxRAMPercentage=75.0", "-Dserver.port=${PORT}", "-jar", "app.jar"]

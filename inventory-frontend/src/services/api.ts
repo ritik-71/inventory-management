@@ -3,11 +3,37 @@ import { apiClient } from '../utils/apiClient';
 
 const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080') + '/api/items';
 
-export const getItems = async (search?: string): Promise<InventoryItem[]> => {
-  const queryParam = search ? `search=${encodeURIComponent(search)}&size=1000` : `size=1000`;
-  const url = `${API_BASE_URL}?${queryParam}`;
+export interface PageResponse<T> {
+  content: T[];
+  totalPages: number;
+  totalElements: number;
+  size: number;
+  number: number;
+}
+
+export const getItems = async (search?: string, page: number = 0, size: number = 10, sort: string = 'id,desc'): Promise<PageResponse<InventoryItem>> => {
+  const queryParams = new URLSearchParams({
+    page: page.toString(),
+    size: size.toString(),
+    sort: sort
+  });
+  if (search) queryParams.append('search', search);
+
+  const url = `${API_BASE_URL}?${queryParams.toString()}`;
   const response: any = await apiClient<any>(url);
-  return response.content || response;
+  
+  if (response.content) {
+    return response as PageResponse<InventoryItem>;
+  }
+  
+  // Fallback if backend doesn't return page structure
+  return {
+    content: response,
+    totalPages: 1,
+    totalElements: response.length,
+    size: response.length,
+    number: 0
+  };
 };
 
 export const addItem = (item: Omit<InventoryItem, 'id' | 'dateAdded'>): Promise<InventoryItem> => {

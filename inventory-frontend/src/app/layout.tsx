@@ -24,6 +24,11 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Enterprise Runtime Environment Validation
+  if (typeof window !== 'undefined' && !process.env.NEXT_PUBLIC_API_URL && process.env.NODE_ENV === 'production') {
+    console.error("FATAL: NEXT_PUBLIC_API_URL is missing in production environment.");
+  }
+
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
       <body>
