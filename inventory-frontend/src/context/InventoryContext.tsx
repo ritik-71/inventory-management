@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import { InventoryItem } from '../types/inventory';
 import { getItems, addItem, updateItem, deleteItem } from '../services/api';
 import { useToast } from './ToastContext';
@@ -31,8 +31,14 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const { addToast } = useToast();
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const fetchItems = useCallback(async (search?: string, page: number = 0, sort?: string) => {
+    // Cancel any in-flight request to prevent stale data overwrites
+    abortControllerRef.current?.abort();
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
     setLoading(true);
     setError(null);
     try {
@@ -41,18 +47,25 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       
       const data = await getItems(activeSearch, page, 10, activeSort);
       
-      setItems(data.content);
-      setTotalPages(data.totalPages);
-      setTotalElements(data.totalElements);
-      setCurrentPage(data.number);
-      
-      if (search !== undefined) setCurrentSearch(search);
-      if (sort !== undefined) setCurrentSort(sort);
+      // Only update state if this request wasn't cancelled
+      if (!controller.signal.aborted) {
+        setItems(data.content);
+        setTotalPages(data.totalPages);
+        setTotalElements(data.totalElements);
+        setCurrentPage(data.number);
+        
+        if (search !== undefined) setCurrentSearch(search);
+        if (sort !== undefined) setCurrentSort(sort);
+      }
     } catch (err: any) {
-      setError(err.message);
-      addToast("Failed to fetch items", "error");
+      if (!controller.signal.aborted) {
+        setError(err.message);
+        addToast("Failed to fetch items", "error");
+      }
     } finally {
-      setLoading(false);
+      if (!controller.signal.aborted) {
+        setLoading(false);
+      }
     }
   }, [addToast, currentSearch, currentSort]);
 
@@ -79,15 +92,20 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   }, [addToast, fetchItems]);
 
   const removeItem = useCallback(async (id: number) => {
+    // Optimistic: remove from UI immediately
+    const previousItems = items;
+    setItems(prev => prev.filter(item => item.id !== id));
     try {
       await deleteItem(id);
       addToast("Item deleted successfully", "success");
-      await fetchItems();
+      await fetchItems(); // Re-sync with server for accurate pagination
     } catch (err: any) {
+      // Rollback on failure
+      setItems(previousItems);
       addToast("Failed to delete item", "error");
       throw err;
     }
-  }, [addToast, fetchItems]);
+  }, [addToast, fetchItems, items]);
 
   const bulkRemoveItems = useCallback(async (ids: number[]) => {
     try {
