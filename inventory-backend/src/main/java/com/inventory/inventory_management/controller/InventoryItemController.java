@@ -45,6 +45,7 @@ public class InventoryItemController {
         BigDecimal inventoryValue = BigDecimal.ZERO;
         long lowStock = 0;
         long outOfStock = 0;
+        Map<String, Long> categoryInsights = new HashMap<>();
 
         for (InventoryItemDTO item : allItems) {
             if (item.getSellingPrice() != null && item.getQuantity() != null) {
@@ -54,6 +55,9 @@ public class InventoryItemController {
                 if (item.getQuantity() > 0 && item.getQuantity() < 10) lowStock++;
                 if (item.getQuantity() == 0) outOfStock++;
             }
+            if (item.getCategory() != null) {
+                categoryInsights.put(item.getCategory(), categoryInsights.getOrDefault(item.getCategory(), 0L) + 1L);
+            }
         }
 
         Map<String, Object> analytics = new HashMap<>();
@@ -61,6 +65,7 @@ public class InventoryItemController {
         analytics.put("inventoryValue", inventoryValue);
         analytics.put("lowStock", lowStock);
         analytics.put("outOfStock", outOfStock);
+        analytics.put("categoryInsights", categoryInsights);
 
         return ResponseEntity.ok(analytics);
     }

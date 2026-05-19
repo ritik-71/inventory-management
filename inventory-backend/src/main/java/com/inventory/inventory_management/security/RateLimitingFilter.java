@@ -46,12 +46,12 @@ public class RateLimitingFilter implements Filter {
             }
         }
 
-        // 3. Enforce brute-force protection on /login
-        if ("/api/auth/login".equals(uri)) {
+        // 3. Enforce brute-force protection on auth endpoints
+        if (uri.equals("/api/auth/login") || uri.equals("/api/auth/register") || uri.equals("/api/auth/refresh")) {
             RateLimitBucket loginBucket = loginLimits.computeIfAbsent(ip, k -> new RateLimitBucket());
             if (!loginBucket.allowRequest(maxLoginRequests)) {
                 long secondsLeft = loginBucket.getSecondsRemaining();
-                sendErrorResponse(httpResponse, "Too many login attempts. Brute force security is active. Please retry in " + secondsLeft + " seconds.", secondsLeft);
+                sendErrorResponse(httpResponse, "Too many authentication attempts. Brute force security is active. Please retry in " + secondsLeft + " seconds.", secondsLeft);
                 return;
             }
         }
