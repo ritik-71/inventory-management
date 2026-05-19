@@ -1,0 +1,35 @@
+# Maven Build Directories & Outputs
+**/target/
+**/*.class
+**/*.jar
+**/*.war
+**/*.ear
+*.db
+
+# Node / Next.js Build Directories & Outputs
+**/node_modules/
+**/.next/
+**/out/
+.next/
+node_modules/
+
+# Local Environment Variables & Secrets
+**/.env
+**/.env.local
+**/.env.development.local
+**/.env.test.local
+**/.env.production.local
+**/.env.production
+
+# IDEs & System Files
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+.DS_Store
+Thumbs.db
+Desktop.ini
+test.txt

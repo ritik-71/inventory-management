@@ -16,15 +16,13 @@ public class InventoryManagementApplication {
 	}
 
 	@Bean
-	public CommandLineRunner loadData(InventoryItemRepository inventoryRepo, UserRepository userRepo) {
+	public CommandLineRunner loadData(InventoryItemRepository inventoryRepo, UserRepository userRepo, org.springframework.security.crypto.password.PasswordEncoder passwordEncoder) {
 		return args -> {
             if (userRepo.count() == 0) {
                 User admin = new User();
+                admin.setName("Admin User");
                 admin.setEmail("admin1@gmail.com");
-                // The password "admin@123" will be encoded in AuthController, but for dummy data we should use encoded password
-                // For now, since Spring Security is added, we'll need a BCryptPasswordEncoder. We'll set a raw password and let Auth login handle it or just encode it.
-                // Spring security expects bcrypt. admin@123 -> $2a$10$T8P.mE.fPjN8eO0hH5hH8.D8z2K7Z0h2P4P9z2K7Z0h2P4P9z2K7Z
-                admin.setPassword("$2a$10$xn3LI/AjqicFYZFruSwve.681477XaVNaUQbr1gioaWPn4t1KsnmG"); // "admin@123"
+                admin.setPassword(passwordEncoder.encode("admin@123"));
                 admin.setRole("ROLE_ADMIN");
                 userRepo.save(admin);
             }

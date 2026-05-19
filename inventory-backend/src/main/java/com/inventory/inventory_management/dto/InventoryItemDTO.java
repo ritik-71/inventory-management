@@ -1,21 +1,43 @@
 package com.inventory.inventory_management.dto;
 
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.PositiveOrZero;
+import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 public class InventoryItemDTO {
     private Long id;
+
+    @NotBlank(message = "Name is required")
+    @Size(max = 255, message = "Name must not exceed 255 characters")
     private String name;
+
     private String skuCode;
     private String barcode;
     private String productImage;
     private String brand;
     private String unitType;
+
+    @NotBlank(message = "Category is required")
     private String category;
+
+    @NotNull(message = "Quantity is required")
+    @PositiveOrZero(message = "Quantity must be zero or greater")
     private Integer quantity;
+
+    @NotNull(message = "Purchase price is required")
+    @PositiveOrZero(message = "Purchase price must be zero or greater")
     private BigDecimal purchasePrice;
+
+    @NotNull(message = "Selling price is required")
+    @PositiveOrZero(message = "Selling price must be zero or greater")
     private BigDecimal sellingPrice;
+
+    @NotBlank(message = "Supplier is required")
     private String supplier;
+
     private String supplierEmail;
     private String warehouseLocation;
     private LocalDateTime expiryDate;

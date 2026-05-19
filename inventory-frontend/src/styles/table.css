@@ -1,0 +1,70 @@
+.table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+  border: 1px solid var(--border);
+  position: relative;
+  transition: var(--transition);
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  text-align: left;
+}
+
+.data-table th {
+  background-color: var(--bg);
+  padding: 1rem 1.25rem;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  font-weight: 600;
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  transition: background-color 0.25s ease, border-color 0.25s ease;
+}
+
+.data-table td {
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.875rem;
+  color: var(--text-main);
+  transition: background-color 0.15s, color 0.25s ease, border-color 0.25s ease;
+}
+
+.data-table tr:last-child td {
+  border-bottom: none;
+}
+
+/* Adaptive Zebra Striping */
+.data-table tbody tr:nth-child(even) {
+  background-color: rgba(0, 0, 0, 0.015);
+}
+
+/* Custom dark-mode adjustment for zebra striping */
+@media (prefers-color-scheme: dark) {
+  .data-table tbody tr:nth-child(even) {
+    background-color: rgba(255, 255, 255, 0.015);
+  }
+}
+
+.dark .data-table tbody tr:nth-child(even) {
+  background-color: rgba(255, 255, 255, 0.015);
+}
+
+/* Adaptive Hover Highlight (Semi-transparent Primary Blue) */
+.data-table tbody tr:hover td {
+  background-color: rgba(37, 99, 235, 0.06);
+}
+
+.table-actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}

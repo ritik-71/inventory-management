@@ -1,0 +1,35 @@
+services:
+  # Spring Boot Backend Web Service
+  - type: web
+    name: inventory-backend
+    env: docker
+    dockerfilePath: Dockerfile
+    context: inventory-backend
+    plan: free
+    envVars:
+      - key: PORT
+        value: 8080
+      - key: SPRING_PROFILES_ACTIVE
+        value: prod
+      - key: SPRING_DATASOURCE_URL
+        fromDatabase:
+          name: inventory-db
+          property: jdbcConnectionString
+      - key: SPRING_DATASOURCE_USERNAME
+        fromDatabase:
+          name: inventory-db
+          property: user
+      - key: SPRING_DATASOURCE_PASSWORD
+        fromDatabase:
+          name: inventory-db
+          property: password
+      - key: JWT_SECRET
+        generateValue: true # Generates a secure random 256-bit string automatically
+      - key: ALLOWED_ORIGINS
+        value: http://localhost:3000,http://localhost:3001 # User should append Vercel production URL here
+
+databases:
+  - name: inventory-db
+    plan: free
+    databaseName: inventory
+    user: inventory_user

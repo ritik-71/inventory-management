@@ -1,0 +1,7 @@
+# Enterprise Inventory Portal Robots.txt
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /dashboard/
+
+Sitemap: https://inventory-management-portal.vercel.app/sitemap.xml

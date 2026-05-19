@@ -1,0 +1,64 @@
+name: Enterprise CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, master, dev ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  # Job 1: Build & Validate the Spring Boot Java Backend
+  backend-validation:
+    name: Backend Build & Unit Verification
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v3
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v3
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Compile and Validate Backend Compilation
+        run: |
+          cd inventory-backend
+          chmod +x mvnw
+          ./mvnw clean compile
+
+      - name: Run Backend JUnit Test Suite
+        run: |
+          cd inventory-backend
+          ./mvnw test -DskipTests=false
+
+  # Job 2: Build & Validate the Next.js React Frontend
+  frontend-validation:
+    name: Frontend Build & Lint Verification
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: inventory-frontend/package-lock.json
+
+      - name: Install Frontend Dependencies
+        run: |
+          cd inventory-frontend
+          npm ci
+
+      - name: Run Linter Audits
+        run: |
+          cd inventory-frontend
+          npm run lint --if-present
+
+      - name: Run Frontend Optimized Production Build
+        run: |
+          cd inventory-frontend
+          npm run build

@@ -4,25 +4,26 @@ import com.inventory.inventory_management.dto.InventoryItemDTO;
 import com.inventory.inventory_management.entity.InventoryItem;
 import com.inventory.inventory_management.exception.ResourceNotFoundException;
 import com.inventory.inventory_management.repository.InventoryItemRepository;
-import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
-import java.util.stream.Collectors;
-
 @Service
-@RequiredArgsConstructor
 public class InventoryItemServiceImpl implements InventoryItemService {
 
     private final InventoryItemRepository repository;
     private final ModelMapper modelMapper;
 
+    public InventoryItemServiceImpl(InventoryItemRepository repository, ModelMapper modelMapper) {
+        this.repository = repository;
+        this.modelMapper = modelMapper;
+    }
+
     @Override
-    public List<InventoryItemDTO> getAllItems() {
-        return repository.findAll().stream()
-                .map(item -> modelMapper.map(item, InventoryItemDTO.class))
-                .collect(Collectors.toList());
+    public Page<InventoryItemDTO> getAllItems(Pageable pageable) {
+        return repository.findAll(pageable)
+                .map(item -> modelMapper.map(item, InventoryItemDTO.class));
     }
 
     @Override
@@ -72,9 +73,8 @@ public class InventoryItemServiceImpl implements InventoryItemService {
     }
 
     @Override
-    public List<InventoryItemDTO> searchItemsByName(String name) {
-        return repository.findByNameContainingIgnoreCase(name).stream()
-                .map(item -> modelMapper.map(item, InventoryItemDTO.class))
-                .collect(Collectors.toList());
+    public Page<InventoryItemDTO> searchItemsByName(String name, Pageable pageable) {
+        return repository.findByNameContainingIgnoreCase(name, pageable)
+                .map(item -> modelMapper.map(item, InventoryItemDTO.class));
     }
 }

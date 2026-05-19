@@ -2,13 +2,14 @@ package com.inventory.inventory_management.service;
 
 import com.inventory.inventory_management.dto.InventoryItemDTO;
 
-import java.util.List;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 public interface InventoryItemService {
-    List<InventoryItemDTO> getAllItems();
+    Page<InventoryItemDTO> getAllItems(Pageable pageable);
     InventoryItemDTO getItemById(Long id);
     InventoryItemDTO createItem(InventoryItemDTO itemDTO);
     InventoryItemDTO updateItem(Long id, InventoryItemDTO itemDTO);
     void deleteItem(Long id);
-    List<InventoryItemDTO> searchItemsByName(String name);
+    Page<InventoryItemDTO> searchItemsByName(String name, Pageable pageable);
 }
