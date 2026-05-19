@@ -153,13 +153,23 @@ export const InventoryTable: React.FC<InventoryTableProps> = React.memo(({
         </tbody>
       </table>
       {totalPages > 1 && (
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem 1.25rem', borderTop: '1px solid var(--border)', background: '#fff' }}>
-          <span style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>
+        <div className="pagination-container">
+          <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 600 }}>
             Page {currentPage} of {totalPages}
           </span>
           <div style={{ display: 'flex', gap: '0.5rem' }}>
-            <button className="btn btn-outline" disabled={currentPage <= 1} onClick={() => onPageChange && onPageChange(currentPage - 1)}>Previous</button>
-            <button className="btn btn-outline" disabled={currentPage >= totalPages} onClick={() => onPageChange && onPageChange(currentPage + 1)}>Next</button>
+            <button className="btn btn-outline" disabled={currentPage <= 1} onClick={() => onPageChange && onPageChange(currentPage - 1)}>
+              <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{ marginRight: '0.25rem' }}>
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+              Prev
+            </button>
+            <button className="btn btn-outline" disabled={currentPage >= totalPages} onClick={() => onPageChange && onPageChange(currentPage + 1)}>
+              Next
+              <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{ marginLeft: '0.25rem' }}>
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
           </div>
         </div>
       )}

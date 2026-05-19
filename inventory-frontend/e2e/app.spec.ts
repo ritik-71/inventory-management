@@ -5,14 +5,14 @@ const BASE_URL = process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3000';
 test.describe('Authentication Flow', () => {
   test('should show login page on root', async ({ page }) => {
     await page.goto(BASE_URL);
-    await expect(page.locator('text=Sign In')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('button', { name: 'Access System' })).toBeVisible({ timeout: 10000 });
   });
 
   test('should reject invalid credentials', async ({ page }) => {
     await page.goto(BASE_URL);
     await page.fill('input[type="email"]', 'wrong@example.com');
     await page.fill('input[type="password"]', 'wrongpassword');
-    await page.click('button[type="submit"]');
+    await page.click('button:has-text("Access System")');
     // Should show error toast or stay on login page
     await expect(page).toHaveURL(BASE_URL + '/');
   });
@@ -21,7 +21,7 @@ test.describe('Authentication Flow', () => {
     await page.goto(BASE_URL);
     await page.fill('input[type="email"]', 'admin1@gmail.com');
     await page.fill('input[type="password"]', 'admin@123');
-    await page.click('button[type="submit"]');
+    await page.click('button:has-text("Access System")');
     await page.waitForURL('**/dashboard**', { timeout: 15000 });
     await expect(page.url()).toContain('/dashboard');
   });
@@ -32,24 +32,25 @@ test.describe('Dashboard Navigation', () => {
     await page.goto(BASE_URL);
     await page.fill('input[type="email"]', 'admin1@gmail.com');
     await page.fill('input[type="password"]', 'admin@123');
-    await page.click('button[type="submit"]');
+    await page.click('button:has-text("Access System")');
     await page.waitForURL('**/dashboard**', { timeout: 15000 });
   });
 
   test('should display analytics page as default dashboard', async ({ page }) => {
+    await page.screenshot({ path: 'debug-dashboard.png' });
     await expect(page.locator('text=System Analytics')).toBeVisible();
   });
 
   test('should navigate to inventory via sidebar', async ({ page }) => {
-    await page.click('text=Inventory');
+    await page.getByRole('link', { name: 'Inventory' }).click();
     await page.waitForURL('**/dashboard/inventory**');
     await expect(page.locator('text=Inventory Management')).toBeVisible();
   });
 
   test('should navigate back to analytics via sidebar', async ({ page }) => {
-    await page.click('text=Inventory');
+    await page.getByRole('link', { name: 'Inventory' }).click();
     await page.waitForURL('**/dashboard/inventory**');
-    await page.click('text=Analytics');
+    await page.getByRole('link', { name: 'Analytics' }).click();
     await page.waitForURL('**/dashboard');
     await expect(page.locator('text=System Analytics')).toBeVisible();
   });
@@ -60,9 +61,9 @@ test.describe('Inventory CRUD', () => {
     await page.goto(BASE_URL);
     await page.fill('input[type="email"]', 'admin1@gmail.com');
     await page.fill('input[type="password"]', 'admin@123');
-    await page.click('button[type="submit"]');
+    await page.click('button:has-text("Access System")');
     await page.waitForURL('**/dashboard**', { timeout: 15000 });
-    await page.click('text=Inventory');
+    await page.getByRole('link', { name: 'Inventory' }).click();
     await page.waitForURL('**/dashboard/inventory**');
   });
 
@@ -71,8 +72,9 @@ test.describe('Inventory CRUD', () => {
   });
 
   test('should open add item modal', async ({ page }) => {
-    await page.click('text=Add New Item');
-    await expect(page.locator('text=Add Inventory Item')).toBeVisible();
+    // Both page header and filter bar have add buttons, so we specify the exact name
+    await page.getByRole('button', { name: 'Add New Item' }).click();
+    await expect(page.getByText('Add New Inventory Item')).toBeVisible();
   });
 });
 
@@ -81,7 +83,7 @@ test.describe('Logout Flow', () => {
     await page.goto(BASE_URL);
     await page.fill('input[type="email"]', 'admin1@gmail.com');
     await page.fill('input[type="password"]', 'admin@123');
-    await page.click('button[type="submit"]');
+    await page.click('button:has-text("Access System")');
     await page.waitForURL('**/dashboard**', { timeout: 15000 });
 
     // Open profile dropdown and click logout

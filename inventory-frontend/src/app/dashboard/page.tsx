@@ -15,12 +15,12 @@ export default function DashboardPage() {
   const { items } = useInventory();
 
   // Show a preview of the latest 5 items on the analytics page
-  const recentItems = [...items].sort((a, b) => b.id - a.id).slice(0, 5);
+  const recentItems = [...(items || [])].sort((a, b) => b.id - a.id).slice(0, 5);
 
   return (
     <>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-        <h2>System Analytics</h2>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+        <h2 style={{ fontSize: '2.25rem', fontWeight: 800, letterSpacing: '-0.03em', color: 'var(--text-main)', fontFamily: 'var(--font-heading)' }}>System Analytics</h2>
       </div>
       
       <AnalyticsCards />

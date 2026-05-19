@@ -41,7 +41,7 @@ public class AuthController {
     private com.inventory.inventory_management.repository.RefreshTokenRepository refreshTokenRepository;
 
     @PostMapping("/login")
-    public ResponseEntity<?> authenticateUser(@RequestBody Map<String, String> loginRequest, HttpServletResponse response) {
+    public ResponseEntity<?> authenticateUser(@RequestBody Map<String, String> loginRequest, HttpServletRequest request, HttpServletResponse response) {
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
                         loginRequest.get("email"),
@@ -63,7 +63,7 @@ public class AuthController {
         refreshTokenRepository.save(rt);
 
         // Set HttpOnly Cookies
-        setCookies(response, accessToken, refreshToken);
+        setCookies(request, response, accessToken, refreshToken);
         
         // Retrieve persistent user details
         User user = userRepository.findByEmail(email)
@@ -80,7 +80,7 @@ public class AuthController {
     }
 
     @PostMapping("/register")
-    public ResponseEntity<?> registerUser(@Valid @RequestBody RegisterDTO registerDTO, HttpServletResponse response) {
+    public ResponseEntity<?> registerUser(@Valid @RequestBody RegisterDTO registerDTO, HttpServletRequest request, HttpServletResponse response) {
         if (userRepository.findByEmail(registerDTO.getEmail()).isPresent()) {
             throw new BadRequestException("Email address is already in use.");
         }
@@ -114,7 +114,7 @@ public class AuthController {
         refreshTokenRepository.save(rt);
 
         // Set HttpOnly Cookies
-        setCookies(response, accessToken, refreshToken);
+        setCookies(request, response, accessToken, refreshToken);
 
         Map<String, Object> responseData = new HashMap<>();
         responseData.put("token", accessToken);
@@ -234,21 +234,23 @@ public class AuthController {
         return ResponseEntity.ok(responseData);
     }
 
-    private void setCookies(HttpServletResponse response, String accessToken, String refreshToken) {
+    private void setCookies(HttpServletRequest request, HttpServletResponse response, String accessToken, String refreshToken) {
+        boolean isSecure = request.isSecure() || "https".equalsIgnoreCase(request.getHeader("X-Forwarded-Proto"));
+        
         ResponseCookie accessCookie = ResponseCookie.from("access_token", accessToken)
                 .httpOnly(true)
-                .secure(true) // Enforced for cross-origin HTTPS deployments
+                .secure(isSecure) 
                 .path("/")
-                .maxAge(900) // 15 mins
-                .sameSite("None") // Permits Vercel to Render cookie exchange
+                .maxAge(900) 
+                .sameSite(isSecure ? "None" : "Lax") 
                 .build();
 
         ResponseCookie refreshCookie = ResponseCookie.from("refresh_token", refreshToken)
                 .httpOnly(true)
-                .secure(true)
+                .secure(isSecure)
                 .path("/")
-                .maxAge(604800) // 7 days
-                .sameSite("None")
+                .maxAge(604800) 
+                .sameSite(isSecure ? "None" : "Lax")
                 .build();
 
         response.addHeader(HttpHeaders.SET_COOKIE, accessCookie.toString());

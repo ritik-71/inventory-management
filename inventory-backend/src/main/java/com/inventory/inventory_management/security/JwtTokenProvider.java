@@ -17,19 +17,21 @@ public class JwtTokenProvider {
     private String jwtSecretString;
 
     private Key key;
-    
+
     // 15 minutes for access token, 7 days for refresh token
-    private final long accessExpirationInMs = 900000; 
-    private final long refreshExpirationInMs = 604800000; 
+    private final long accessExpirationInMs = 900000;
+    private final long refreshExpirationInMs = 604800000;
 
     @PostConstruct
     public void init() {
         if (jwtSecretString == null || jwtSecretString.trim().isEmpty()) {
-            System.err.println("WARNING: JWT_SECRET environment variable is missing! Generating a dynamic ephemeral key. User sessions will NOT persist across restarts.");
+            System.err.println(
+                    "WARNING: JWT_SECRET environment variable is missing! Generating a dynamic ephemeral key. User sessions will NOT persist across restarts.");
             this.key = Keys.secretKeyFor(SignatureAlgorithm.HS256);
         } else {
             if (jwtSecretString.length() < 32) {
-                System.err.println("WARNING: JWT_SECRET is too short (must be at least 32 characters / 256-bits). Generating an ephemeral key instead for safety.");
+                System.err.println(
+                        "WARNING: JWT_SECRET is too short (must be at least 32 characters / 256-bits). Generating an ephemeral key instead for safety.");
                 this.key = Keys.secretKeyFor(SignatureAlgorithm.HS256);
             } else {
                 this.key = Keys.hmacShaKeyFor(jwtSecretString.getBytes(StandardCharsets.UTF_8));
@@ -59,6 +61,7 @@ public class JwtTokenProvider {
 
         return Jwts.builder()
                 .setSubject(email)
+                .setId(java.util.UUID.randomUUID().toString())
                 .setIssuedAt(now)
                 .setExpiration(expiryDate)
                 .signWith(key)
