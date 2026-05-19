@@ -64,12 +64,15 @@ apiInstance.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
     
-    // Automatic retry handling for general network or server faults (idempotent requests only)
-    if (error.code === 'ECONNABORTED' || !error.response) {
+    // Automatic retry handling for network faults and Render cold-start responses
+    if (error.code === 'ECONNABORTED' || !error.response || 
+        [502, 503, 504].includes(error.response?.status)) {
       originalRequest._retryCount = originalRequest._retryCount || 0;
-      if (originalRequest._retryCount < 2 && originalRequest.method === 'GET') {
+      if (originalRequest._retryCount < 3 && ['get', 'GET'].includes(originalRequest.method || '')) {
         originalRequest._retryCount++;
-        console.warn(`Central API Client: Timeout or Network fault. Retrying request (${originalRequest._retryCount}/2)...`);
+        const delay = Math.pow(2, originalRequest._retryCount - 1) * 1000; // 1s, 2s, 4s
+        console.warn(`API Client: Retrying request (${originalRequest._retryCount}/3) after ${delay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
         return apiInstance(originalRequest);
       }
     }

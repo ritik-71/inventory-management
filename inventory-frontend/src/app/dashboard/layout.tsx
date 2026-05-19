@@ -45,38 +45,48 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     // Initial fetch of existing notifications
     fetchNotifications();
 
-    // Establish Server-Sent Events (SSE) connection
+    // Managed SSE connection with reconnect resilience for Render cold restarts
     const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
-    // EventSource does not support custom headers (like Authorization), so we must rely on our secure cookies
-    // Note: withCredentials: true is required for cookies to be passed cross-origin
-    const eventSource = new EventSource(`${API_BASE_URL}/api/notifications/stream`, {
-      withCredentials: true
-    });
+    let eventSource: EventSource | null = null;
+    let reconnectDelay = 1000;
+    let reconnectTimer: NodeJS.Timeout | null = null;
+    let isCancelled = false;
 
-    eventSource.onopen = () => {
-      console.log("SSE Connection to Real-Time Notification Stream established.");
+    const connect = () => {
+      if (isCancelled) return;
+      
+      eventSource = new EventSource(`${API_BASE_URL}/api/notifications/stream`, {
+        withCredentials: true
+      });
+
+      eventSource.onopen = () => {
+        reconnectDelay = 1000; // Reset backoff on successful connection
+      };
+
+      eventSource.addEventListener("NOTIFICATION", (e: any) => {
+        try {
+          const newNotif = JSON.parse(e.data);
+          setNotifications((prev) => [newNotif, ...prev]);
+        } catch (err) {
+          console.error("Failed to parse notification", err);
+        }
+      });
+
+      eventSource.onerror = () => {
+        eventSource?.close();
+        if (isCancelled) return;
+        // Exponential backoff: 1s → 2s → 4s → ... → 30s max
+        reconnectTimer = setTimeout(connect, reconnectDelay);
+        reconnectDelay = Math.min(reconnectDelay * 2, 30000);
+      };
     };
 
-    eventSource.addEventListener("CONNECT", (e: any) => {
-      console.log("SSE Connect Event:", e.data);
-    });
-
-    eventSource.addEventListener("NOTIFICATION", (e: any) => {
-      try {
-        const newNotif = JSON.parse(e.data);
-        setNotifications((prev) => [newNotif, ...prev]);
-      } catch (err) {
-        console.error("Failed to parse incoming real-time notification", err);
-      }
-    });
-
-    eventSource.onerror = (err) => {
-      console.error("SSE Connection Error. Attempting to reconnect...", err);
-      // EventSource auto-reconnects natively
-    };
+    connect();
 
     return () => {
-      eventSource.close();
+      isCancelled = true;
+      eventSource?.close();
+      if (reconnectTimer) clearTimeout(reconnectTimer);
     };
   }, [isAuthenticated]);
 
